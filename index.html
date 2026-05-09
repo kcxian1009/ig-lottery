@@ -418,7 +418,8 @@ window.addEventListener('load', () => {
 
 // ── Fetch Comments ──
 function extractPostId(url) {
-  const match = url.match(/instagram\.com\/p\/([A-Za-z0-9_-]+)/);
+  // Support /p/, /reel/, /tv/ formats
+  const match = url.match(/instagram\.com\/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/);
   return match ? match[1] : null;
 }
 
@@ -442,36 +443,21 @@ async function fetchComments() {
   showProgress(10);
 
   try {
-    // Step 1: Get media ID from shortcode via IG user media
-    const mediaRes = await fetch(
-      `https://graph.facebook.com/v19.0/${IG_USER_ID}/media?fields=id,shortcode,caption,timestamp,comments_count&access_token=${accessToken}`
-    );
-    const mediaData = await mediaRes.json();
-
-    if(mediaData.error) throw new Error(mediaData.error.message);
-
-    // Find matching post
+    // Step 1: Search through all media (posts + reels) to find matching shortcode
     let mediaId = null;
-    let allMedia = mediaData.data || [];
+    let searchUrl = `https://graph.facebook.com/v19.0/${IG_USER_ID}/media?fields=id,shortcode,media_type&limit=50&access_token=${accessToken}`;
 
-    // Check next pages if needed
-    let nextUrl = mediaData.paging?.next;
-    while(!mediaId && nextUrl) {
-      const found = allMedia.find(m => m.shortcode === shortcode);
+    while(searchUrl && !mediaId) {
+      const mediaRes = await fetch(searchUrl);
+      const mediaData = await mediaRes.json();
+      if(mediaData.error) throw new Error(mediaData.error.message);
+      const found = (mediaData.data || []).find(m => m.shortcode === shortcode);
       if(found) { mediaId = found.id; break; }
-      const nextRes = await fetch(nextUrl);
-      const nextData = await nextRes.json();
-      allMedia = nextData.data || [];
-      nextUrl = nextData.paging?.next;
+      searchUrl = mediaData.paging?.next || null;
     }
 
     if(!mediaId) {
-      const found = allMedia.find(m => m.shortcode === shortcode);
-      if(found) mediaId = found.id;
-    }
-
-    if(!mediaId) {
-      throw new Error('找不到這篇貼文，請確認網址是否為 kcz_food 的貼文');
+      throw new Error('找不到這篇貼文／Reel，請確認是 kcz_food 帳號的內容，且貼文不能是私密');
     }
 
     showProgress(40);
