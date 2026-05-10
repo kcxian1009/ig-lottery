@@ -64,16 +64,18 @@ body{background:var(--bg);color:var(--text);font-family:"DM Sans","Noto Sans TC"
 
 /* Prize rows */
 .prize-list{display:flex;flex-direction:column;gap:.6rem;margin-bottom:.75rem}
-.prize-row{display:flex;align-items:center;gap:.6rem;background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:.65rem 1rem;transition:border-color .2s}
+.prize-row{display:flex;flex-direction:column;gap:.5rem;background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:.75rem 1rem;transition:border-color .2s}
 .prize-row:focus-within{border-color:var(--pink);background:#fff}
+.prize-row-top{display:flex;align-items:center;gap:.6rem}
+.prize-row-bottom{display:flex;align-items:center;gap:.5rem;padding-left:30px}
 .prize-row-num{width:22px;height:22px;border-radius:50%;background:var(--grad);color:#fff;font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.prize-name-input{flex:1;border:none;background:transparent;outline:none;font-family:"DM Sans","Noto Sans TC",sans-serif;font-size:.9rem;color:var(--text)}
+.prize-name-input{flex:1;border:none;background:transparent;outline:none;font-family:"DM Sans","Noto Sans TC",sans-serif;font-size:.92rem;color:var(--text);font-weight:500}
 .prize-name-input::placeholder{color:var(--muted)}
-.prize-count-wrap{display:flex;align-items:center;gap:.4rem;border-left:1px solid var(--border);padding-left:.75rem;flex-shrink:0}
-.prize-count-label{color:var(--muted);font-size:.75rem;white-space:nowrap}
-.prize-count-input{width:44px;text-align:center;border:1.5px solid var(--border);border-radius:7px;background:var(--surface);padding:.25rem;font-family:"DM Sans","Noto Sans TC",sans-serif;font-size:.88rem;outline:none;color:var(--text)}
+.prize-count-wrap{display:flex;align-items:center;gap:.5rem}
+.prize-count-label{color:var(--muted);font-size:.78rem}
+.prize-count-input{width:52px;text-align:center;border:1.5px solid var(--border);border-radius:7px;background:var(--surface);padding:.3rem .4rem;font-family:"DM Sans","Noto Sans TC",sans-serif;font-size:.9rem;outline:none;color:var(--text)}
 .prize-count-input:focus{border-color:var(--pink)}
-.prize-del{cursor:pointer;color:var(--muted);font-size:1.2rem;flex-shrink:0;line-height:1;padding-left:.25rem;transition:color .15s}
+.prize-del{cursor:pointer;color:var(--muted);font-size:1.2rem;flex-shrink:0;line-height:1;margin-left:auto;transition:color .15s}
 .prize-del:hover{color:var(--pink)}
 .add-prize-btn{width:100%;padding:.7rem;border:1.5px dashed var(--border);border-radius:12px;background:transparent;color:var(--muted);font-family:"DM Sans","Noto Sans TC",sans-serif;font-size:.88rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:.4rem}
 .add-prize-btn:hover{border-color:var(--pink);color:var(--pink);background:var(--pink-lt)}
@@ -235,8 +237,8 @@ body{background:var(--bg);color:var(--text);font-family:"DM Sans","Noto Sans TC"
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">最少需 @ 標註幾個帳號（0 = 不限）</label>
-      <input type="number" class="form-control" id="mention-count" value="0" min="0" max="20">
+      <label class="form-label">最少需 @ 標註幾個帳號（留空 = 不限）</label>
+      <input type="number" class="form-control" id="mention-count" min="0" max="20" placeholder="0（不限制）">
     </div>
 
     <div class="form-group" style="margin-bottom:.5rem">
@@ -344,11 +346,19 @@ function renderPrizes(){
     var row=document.createElement("div");
     row.className="prize-row";
     var delBtn=prizes.length>1?'<span class="prize-del" onclick="removePrize('+i+')">×</span>':"";
-    row.innerHTML='<div class="prize-row-num">'+(i+1)+'</div>'+
-      '<input class="prize-name-input" placeholder="獎品名稱（如：一等獎 AirPods）" value="'+(p.name||"")+'" oninput="prizes['+i+'].name=this.value">'+
-      '<div class="prize-count-wrap"><span class="prize-count-label">得獎人數</span>'+
-      '<input type="number" class="prize-count-input" min="1" max="100" value="'+(p.count||1)+'" oninput="prizes['+i+'].count=parseInt(this.value)||1"></div>'+
-      delBtn;
+    row.innerHTML=
+      '<div class="prize-row-top">'+
+        '<div class="prize-row-num">'+(i+1)+'</div>'+
+        '<input class="prize-name-input" placeholder="輸入獎品名稱…" value="'+(p.name||"")+'" oninput="prizes['+i+'].name=this.value">'+
+        delBtn+
+      '</div>'+
+      '<div class="prize-row-bottom">'+
+        '<div class="prize-count-wrap">'+
+          '<span class="prize-count-label">得獎人數</span>'+
+          '<input type="number" class="prize-count-input" min="1" max="100" value="'+(p.count||1)+'" oninput="prizes['+i+'].count=parseInt(this.value)||1">'+
+          '<span style="color:var(--muted);font-size:.78rem">人</span>'+
+        '</div>'+
+      '</div>';
     list.appendChild(row);
   });
 }
@@ -478,7 +488,8 @@ function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g
 
 // ── Filter ──
 function getEligible(){
-  var minM=parseInt(document.getElementById("mention-count").value)||0;
+  var minMVal=document.getElementById("mention-count").value;
+  var minM=minMVal===""?0:parseInt(minMVal)||0;
   var allowDup=document.getElementById("allow-dup").checked;
   var pool=allComments.map(function(c){
     var mentions=[...c.text.matchAll(/@([\w.]+)/g)].map(function(m){return"@"+m[1]});
