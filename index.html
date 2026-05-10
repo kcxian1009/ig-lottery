@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="IG抽獎神器">
+<meta name="apple-mobile-web-app-title" content="IG抽獎小幫手">
 <link id="apple-icon" rel="apple-touch-icon">
-<title>IG 抽獎神器</title>
+<title>IG 抽獎小幫手</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -158,7 +158,7 @@ body{background:var(--bg);color:var(--text);font-family:"DM Sans","Noto Sans TC"
 <div class="topbar">
   <div class="logo-icon"><img id="logo-img" src="" alt="IG抽獎"></div>
   <div>
-    <div class="logo-text">IG 抽獎神器</div>
+    <div class="logo-text">IG 抽獎小幫手</div>
     <div class="logo-sub">kcz_food 專屬版</div>
   </div>
   <div class="stepper">
@@ -288,6 +288,7 @@ body{background:var(--bg);color:var(--text);font-family:"DM Sans","Noto Sans TC"
             <div class="slot-item slot-idle-txt">等待抽獎中…</div>
           </div>
         </div>
+        <div id="reveal-panel" style="display:flex;flex-wrap:wrap;justify-content:center;gap:.3rem;min-height:0;max-width:340px"></div>
       </div>
     </div>
     <button class="btn btn-primary btn-lg" id="draw-btn" onclick="startAllDraw()">🎰 一鍵抽出所有獎項！</button>
@@ -355,7 +356,7 @@ function renderPrizes(){
       '<div class="prize-row-bottom">'+
         '<div class="prize-count-wrap">'+
           '<span class="prize-count-label">得獎人數</span>'+
-          '<input type="number" class="prize-count-input" min="1" max="100" value="'+(p.count||1)+'" oninput="prizes['+i+'].count=parseInt(this.value)||1">'+
+          '<input type="number" class="prize-count-input" min="1" max="100" placeholder="1" value="'+(p.count||"")+'" oninput="prizes['+i+'].count=parseInt(this.value)||1">'+
           '<span style="color:var(--muted);font-size:.78rem">人</span>'+
         '</div>'+
       '</div>';
@@ -548,6 +549,7 @@ function setupDrawPage(){
   document.getElementById("results-section").style.display="none";
   document.getElementById("results-list").innerHTML="";
   document.getElementById("slot-wrap").style.display="flex";
+  document.getElementById("reveal-panel").innerHTML="";
   document.getElementById("draw-btn").disabled=false;
   document.getElementById("draw-btn").textContent="🎰 一鍵抽出所有獎項！";
   var pool=getEligible();
@@ -556,46 +558,48 @@ function setupDrawPage(){
   document.getElementById("draw-sub").textContent="共 "+authors.length+" 位符合條件的參與者，共 "+prizes.length+" 個獎項";
 }
 
-function buildReel(pool,winners){
+// Build reel for ONE winner
+function buildSingleReel(pool, winner){
   var reel=document.getElementById("slot-reel");
   reel.innerHTML="";reel.style.transform="translateY(0)";reel.style.transition="none";
-  var items=[];
-  // ensure pool is not empty
   if(!pool.length)return 0;
-  for(var i=0;i<38;i++)items.push("@"+pool[Math.floor(Math.random()*pool.length)]);
-  winners.forEach(function(w){items.push("@"+w)});
+  var items=[];
+  for(var i=0;i<28;i++)items.push("@"+pool[Math.floor(Math.random()*pool.length)]);
+  items.push("@"+winner);
   items.forEach(function(name){
-    var el=document.createElement("div");el.className="slot-item";el.textContent=name;reel.appendChild(el)
+    var el=document.createElement("div");el.className="slot-item";el.textContent=name;reel.appendChild(el);
   });
   return items.length;
 }
 
-function animateReel(total,onDone){
-  if(total===0){setTimeout(onDone,300);return}
+function animateSingleReel(total, onDone){
+  if(total===0){setTimeout(onDone,200);return}
   var reel=document.getElementById("slot-reel");
   var H=56,VP=170,off=(VP-H)/2;
-  var target=total-2,tY=off-target*H;
+  var target=total-1, tY=off-target*H;
   reel.style.transform="translateY("+off+"px)";reel.style.transition="none";
   requestAnimationFrame(function(){requestAnimationFrame(function(){
-    reel.style.transition="transform 1.8s cubic-bezier(.25,.1,.25,1)";
-    reel.style.transform="translateY("+(tY+H*3)+"px)";
+    reel.style.transition="transform 1.3s cubic-bezier(.3,.05,.3,1)";
+    reel.style.transform="translateY("+(tY+H*4)+"px)";
     setTimeout(function(){
-      reel.style.transition="transform 1s cubic-bezier(.22,1,.36,1)";
+      reel.style.transition="transform 0.65s cubic-bezier(.22,1,.36,1)";
       reel.style.transform="translateY("+tY+"px)";
-      document.querySelectorAll(".slot-item").forEach(function(el,i){el.classList.toggle("center",i===target)});
-      setTimeout(onDone,1000);
-    },1900);
+      document.querySelectorAll(".slot-item").forEach(function(el,i){
+        el.classList.toggle("center",i===target);
+      });
+      setTimeout(onDone,700);
+    },1350);
   })});
 }
 
-// Draw all prizes sequentially
+// Draw all prizes, spinning once per winner
 function startAllDraw(){
   if(isDrawing)return;
   var pool=getEligible();
   if(!pool.length){alert("沒有符合條件的參與者！");return}
   var noR=document.getElementById("no-repeat-winner").checked;
 
-  // Pre-compute all winners first (before animation)
+  // Pre-compute all winners
   var usedAccounts=new Set();
   var allResults=[];
   prizes.forEach(function(p,pi){
@@ -603,41 +607,72 @@ function startAllDraw(){
       .filter(function(a){return!usedAccounts.has(a)});
     var wc=Math.min(parseInt(p.count)||1, available.length);
     var shuffled=[...available].sort(function(){return Math.random()-.5});
-    var winners=[];
-    for(var a of shuffled){if(winners.length>=wc)break;winners.push(a)}
+    var winners=shuffled.slice(0,wc);
     winners.forEach(function(w){usedAccounts.add(w)});
     allResults.push({prize:p, winners:winners});
   });
 
+  var poolNames=(noR?[...new Set(pool.map(function(c){return c.username}))]:pool.map(function(c){return c.username}));
+
   isDrawing=true;
   document.getElementById("draw-btn").disabled=true;
   document.getElementById("results-section").style.display="none";
+  var revealPanel=document.getElementById("reveal-panel");
+  revealPanel.innerHTML="";
 
-  // Animate through each prize sequentially
-  var poolNames=(noR?[...new Set(pool.map(function(c){return c.username}))]:pool.map(function(c){return c.username}));
-  
-  function drawNext(idx){
-    if(idx>=allResults.length){
-      // All done — show results
+  // Flatten: one spin per winner
+  var spinQueue=[];
+  allResults.forEach(function(r,pi){
+    var label=r.prize.name||"獎項 "+(pi+1);
+    if(r.winners.length===0){
+      spinQueue.push({label:label, winner:null, winnerIdx:0, totalWinners:0, empty:true});
+    } else {
+      r.winners.forEach(function(w,wi){
+        spinQueue.push({label:label, winner:w, winnerIdx:wi, totalWinners:r.winners.length, empty:false});
+      });
+    }
+  });
+
+  var currentSpin=0;
+
+  function runNext(){
+    if(currentSpin>=spinQueue.length){
       isDrawing=false;
-      showAllResults(allResults);
-      addHistoryBatch(allResults);
-      launchConfetti();
+      setTimeout(function(){
+        showAllResults(allResults);
+        addHistoryBatch(allResults);
+        launchConfetti();
+      },300);
       return;
     }
-    var result=allResults[idx];
-    var p=result.prize;
+
+    var spin=spinQueue[currentSpin];
+    currentSpin++;
+
+    // Update badge
     var badge=document.getElementById("prize-badge");
     badge.style.display="inline-flex";
-    badge.textContent="🎁 "+(p.name||"獎項 "+(idx+1));
+    var badgeText="🎁 "+spin.label;
+    if(spin.totalWinners>1) badgeText+=" ("+(spin.winnerIdx+1)+"/"+spin.totalWinners+")";
+    badge.textContent=badgeText;
 
-    var total=buildReel(poolNames.length?poolNames:["空"], result.winners.length?result.winners:["？"]);
-    animateReel(total,function(){
-      setTimeout(function(){drawNext(idx+1)},600);
+    if(spin.empty){
+      setTimeout(runNext,500);
+      return;
+    }
+
+    var total=buildSingleReel(poolNames, spin.winner);
+    animateSingleReel(total, function(){
+      var tag=document.createElement("div");
+      tag.style.cssText="display:inline-flex;background:var(--grad);color:#fff;border-radius:999px;padding:.35rem 1rem;font-size:.88rem;font-weight:700;margin:.2rem;animation:popIn .3s both";
+      tag.textContent="@"+spin.winner;
+      revealPanel.appendChild(tag);
+      var pauseMs=currentSpin<spinQueue.length?300:100;
+      setTimeout(runNext,pauseMs);
     });
   }
 
-  drawNext(0);
+  runNext();
 }
 
 function showAllResults(allResults){
@@ -714,7 +749,9 @@ function resetDraw(){
   document.getElementById("results-section").style.display="none";
   document.getElementById("slot-reel").innerHTML='<div class="slot-item slot-idle-txt">等待抽獎中…</div>';
   document.getElementById("prize-badge").style.display="none";
+  document.getElementById("reveal-panel").innerHTML="";
   document.getElementById("draw-btn").disabled=false;
+  document.getElementById("draw-btn").textContent="🎰 一鍵抽出所有獎項！";
   prizeWinners=prizes.map(function(){return[]});
 }
 function addHistoryBatch(allResults){
